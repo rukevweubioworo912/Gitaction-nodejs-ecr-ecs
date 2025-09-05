@@ -1,18 +1,18 @@
 # Node.js LTS
-
+FROM node:20-alpine
 
 # App directory
 WORKDIR /usr/src/app
 
-# Copy package and install dependencies
+# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install 
+RUN npm install --production
 
-# Copy all files
+# Copy the rest of the app
 COPY . .
 
 # Expose port
 EXPOSE 3000
 
-# Start app
-CMD ["npm", "start"]
+# Start the app
+CMD ["node", "app.js"]
