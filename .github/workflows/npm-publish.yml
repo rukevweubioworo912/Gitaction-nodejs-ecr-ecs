@@ -41,7 +41,7 @@ jobs:
         working-directory: ./space-shooter-node
 
   docker-build-and-push-aws-ecr-image-repo:
-    needs: build-and-test
+    needs: [build-and-test-nodejs-app]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
