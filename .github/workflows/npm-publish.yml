@@ -13,7 +13,7 @@ env:
   IMAGE_TAG: latest
 
 jobs:
-  build-and-test:
+  build-and-test-nodejs-app:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,7 +40,7 @@ jobs:
         run: npx jest --coverage --detectOpenHandles
         working-directory: ./space-shooter-node
 
-  docker-build-and-push:
+  docker-build-and-push-aws-ecr-image-repo:
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
