@@ -53,6 +53,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Create ECS Cluster if not exists
+        run: |
+          aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --region ${{ secrets.AWS_REGION }} \
+            || aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
+
       - name: Login to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
@@ -72,6 +77,26 @@ jobs:
           task-definition: ./space-shooter-node/ecs-task-def.json
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+
+      - name: Create ECS Service if not exists (default VPC)
+        run: |
+          SUBNETS=$(aws ec2 describe-subnets \
+            --filters Name=default-for-az,Values=true \
+            --query 'Subnets[*].SubnetId' \
+            --output text)
+          
+          aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --region ${{ secrets.AWS_REGION }} \
+            || aws ecs create-service \
+               --cluster ${{ env.ECS_CLUSTER }} \
+               --service-name ${{ env.ECS_SERVICE }} \
+               --task-definition ${{ steps.task-def.outputs.task-definition }} \
+               --desired-count 1 \
+               --launch-type FARGATE \
+               --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],assignPublicIp=ENABLED}" \
+               --region ${{ secrets.AWS_REGION }}
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
