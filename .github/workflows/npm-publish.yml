@@ -23,12 +23,21 @@ jobs:
         with:
           node-version: 20
 
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: space-shooter-node/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('space-shooter-node/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install dependencies
         run: npm install
+        working-directory: ./space-shooter-node
 
       - name: Run tests
         run: npm test
-
+        working-directory: ./space-shooter-node
 
   docker-build-and-push:
     needs: build-and-test
@@ -53,14 +62,14 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG ./space-shooter-node
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ecs-task-def.json
+          task-definition: ./space-shooter-node/ecs-task-def.json
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
