@@ -10,6 +10,7 @@ env:
   ECS_CLUSTER: ubioworo-cluster
   ECS_SERVICE: my-node-service
   CONTAINER_NAME: nodejs-app
+  IMAGE_TAG: latest
 
 jobs:
   build-and-test:
@@ -62,46 +63,20 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build Docker image
+        run: docker build -t ${{ env.CONTAINER_NAME }}:$IMAGE_TAG ./space-shooter-node
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.CONTAINER_NAME }}:$IMAGE_TAG
+          format: table
+          exit-code: 1       # Fail if vulnerabilities found
+          ignore-unfixed: true
+
+      - name: Tag and push Docker image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG ./space-shooter-node
+          docker tag ${{ env.CONTAINER_NAME }}:$IMAGE_TAG $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
-
-      # - name: Fill in the new image ID in the Amazon ECS task definition
-      #   id: task-def
-      #   uses: aws-actions/amazon-ecs-render-task-definition@v1
-      #   with:
-      #     task-definition: ./space-shooter-node/ecs-task-def.json
-      #     container-name: ${{ env.CONTAINER_NAME }}
-      #     image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-
-      # - name: Create ECS Service if not exists (default VPC)
-      #   run: |
-      #     SUBNETS=$(aws ec2 describe-subnets \
-      #       --filters Name=default-for-az,Values=true \
-      #       --query 'Subnets[*].SubnetId' \
-      #       --output text)
-          
-      #     aws ecs describe-services \
-      #       --cluster ${{ env.ECS_CLUSTER }} \
-      #       --services ${{ env.ECS_SERVICE }} \
-      #       --region ${{ secrets.AWS_REGION }} \
-      #       || aws ecs create-service \
-      #          --cluster ${{ env.ECS_CLUSTER }} \
-      #          --service-name ${{ env.ECS_SERVICE }} \
-      #          --task-definition ${{ steps.task-def.outputs.task-definition }} \
-      #          --desired-count 1 \
-      #          --launch-type FARGATE \
-      #          --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],assignPublicIp=ENABLED}" \
-      #          --region ${{ secrets.AWS_REGION }}
-
-      # - name: Deploy Amazon ECS task definition
-      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      #   with:
-      #     task-definition: ${{ steps.task-def.outputs.task-definition }}
-      #     service: ${{ env.ECS_SERVICE }}
-      #     cluster: ${{ env.ECS_CLUSTER }}
-      #     wait-for-service-stability: tru
