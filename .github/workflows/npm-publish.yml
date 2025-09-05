@@ -67,11 +67,11 @@ jobs:
         run: docker build -t ${{ env.CONTAINER_NAME }}:$IMAGE_TAG ./space-shooter-node
 
       - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@master 
         with:
-          image-ref: ${{ env.CONTAINER_NAME }}:$IMAGE_TAG
+          image-ref: ${{ env.CONTAINER_NAME }}:${{ env.IMAGE_TAG }}
           format: table
-          exit-code: 1       # Fail if vulnerabilities found
+          exit-code: 1       
           ignore-unfixed: true
 
       - name: Tag and push Docker image to Amazon ECR
