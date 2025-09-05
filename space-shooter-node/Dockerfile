@@ -1,5 +1,5 @@
 # Node.js LTS
-FROM node:20-alpine
+
 
 # App directory
 WORKDIR /usr/src/app
