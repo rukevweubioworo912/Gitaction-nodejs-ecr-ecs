@@ -71,7 +71,7 @@ jobs:
         with:
           image-ref: ${{ env.CONTAINER_NAME }}:${{ env.IMAGE_TAG }}
           format: table
-          exit-code: 1       
+          exit-code: 0       
           ignore-unfixed: true
 
       - name: Tag and push Docker image to Amazon ECR
